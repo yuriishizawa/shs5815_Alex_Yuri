@@ -1,0 +1,9 @@
+ATENÇÃO: Modificar somente os dados grifados em amarelo nos arquivos Excel
+
+1º: Mudar os consumos dos nós [dados_dos_nos.xlsx];
+
+2º: Mudar os materiais da rede de tubulação [dados_da_rede.xlsx];
+
+3º: Salvar os arquivos em excel e compilar o modelo.py.
+
+Resultados: Os valores das vazões nos trechos e da pressões nos nós aparecerão na tela do compilador após a execução da simulação e também estarão disponíveis nos arquivos "rede.txt" e "pressões.txt", respectivamente.
