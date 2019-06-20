@@ -1,8 +1,10 @@
-import math
 import numpy as np
+import math
 import pandas as pd
 df = pd.read_csv('trechos.csv', sep = ';')
 #df = pd.read_excel('dados_da_rede.xlsx')
+Q_R1 = 10 #vazão que sai do reservatório
+df['q'] = df['q']*Q_R1
 
 def hazen(x):
     x['j'] = 10.674*((abs(x['q'])/1000)**1.852)/((150**1.852)*((x['D']/1000)**4.871))
@@ -33,34 +35,35 @@ def teste_u(x):
     soma['delta_q'] = -soma['h']/(2*soma['h_q'])
     return soma
 
-soma = teste_u(rede)
-
 ### Redistribuição das vazões pelo Método de Hardy-Cross ###
-while soma['modulo_h'][1:3].max() >= 0.001:      #para modulo_h< 0.01
-   
-    for trecho in list(range(1,8)):
-        rede.iloc[trecho,7] += soma['delta_q'][1]
-        
-    for trecho in list(range(8,16)):
-        rede.iloc[trecho,7] += soma['delta_q'][2]
-    
-    for trecho in list(range(16,24)):
-        rede.iloc[trecho,7] += soma['delta_q'][3]
-        
-    #Trechos em mais de um anel
-        
-    rede.iloc[1,7] -= soma['delta_q'][2]
-    rede.iloc[2,7] -= soma['delta_q'][2]
-    rede.iloc[8,7] -= soma['delta_q'][1]
-    rede.iloc[9,7] -= soma['delta_q'][1]
-    rede.iloc[10,7] -= soma['delta_q'][3]
-    rede.iloc[11,7] -= soma['delta_q'][3]
-    rede.iloc[22,7] -= soma['delta_q'][2]
-    rede.iloc[23,7] -= soma['delta_q'][2]
-    
-    rede = universal(rede)
+def hardy_cross(rede,soma):
     soma = teste_u(rede)
+    while soma['modulo_h'][1:3].max() >= 0.001:      #para modulo_h< 0.01
 
+        for trecho in list(range(1,8)):
+            rede.iloc[trecho,7] += soma['delta_q'][1]
+
+        for trecho in list(range(8,16)):
+            rede.iloc[trecho,7] += soma['delta_q'][2]
+
+        for trecho in list(range(16,24)):
+            rede.iloc[trecho,7] += soma['delta_q'][3]
+
+        #Trechos em mais de um anel
+
+        rede.iloc[1,7] -= soma['delta_q'][2]
+        rede.iloc[2,7] -= soma['delta_q'][2]
+        rede.iloc[8,7] -= soma['delta_q'][1]
+        rede.iloc[9,7] -= soma['delta_q'][1]
+        rede.iloc[10,7] -= soma['delta_q'][3]
+        rede.iloc[11,7] -= soma['delta_q'][3]
+        rede.iloc[22,7] -= soma['delta_q'][2]
+        rede.iloc[23,7] -= soma['delta_q'][2]
+
+        rede = universal(rede)
+        soma = teste_u(rede)
+
+hardy_cross(rede,soma)
 rede['q'] = round(rede['q'],3)      ### Arredondamento dos valores de vazão
 
 ### Pressões na rede ###
