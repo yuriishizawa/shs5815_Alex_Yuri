@@ -1,7 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
-df = pd.read_csv('trechos.csv', sep = ' ')
+df = pd.read_csv('trechos.csv', sep = ';')
 #df = pd.read_excel('dados_da_rede.xlsx')
 
 def hazen(x):
@@ -64,7 +64,7 @@ while soma['modulo_h'][1:3].max() >= 0.001:      #para modulo_h< 0.01
 rede['q'] = round(rede['q'],3)      ### Arredondamento dos valores de vazão
 
 ### Pressões na rede ###
-p = pd.read_csv('nos.csv', sep = ' ')
+p = pd.read_csv('nos.csv', sep = ';')
 p['h'] = float(0)
 p.iloc[1,3] = rede['h'][0]
 p.iloc[2,3] = p['h'][1] + rede['h'][1]
