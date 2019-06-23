@@ -150,9 +150,7 @@ class HardyCross_rede:
         self.VazaoSaida_reservatorio = VazaoSaida_reservatorio
 
         self.rugosidade = rugosidade
-    
         # Vazão chute inicial
-#         self.dados_trechos.loc[0, 'Q0_modulo'] = self.VazaoSaida_reservatorio
 
         self.dados_trechos.loc[:, 'Q0_modulo'] = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
         self.dados_trechos.loc[self.dados_trechos['Trecho'].str.contains('R'), 'Q_reserva_0'] = self.dados_trechos['Q0_modulo']
@@ -184,9 +182,11 @@ class HardyCross_rede:
         Output:
         Perda de Carga unitária (m/m)
         '''
-        V = (abs(Q/1000) * 4)/(np.pi * D/1000**2)
-        Rey = V * D/1000 * 10**3
-        f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))
+        V = abs(Q/1000 * 4)/(np.pi * (D/1000)**2)
+        Rey = abs(1000 * V * D/1000)/(1.003*10**(-3))
+        f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
+#         f = ((64/Rey)**8 + 9.5*(np.log(((e/1000/(3.7*D/1000))+5.74/(Rey)**0.9)-(2500/Rey)**6))**-16)**0.125
+#         print(f)
         return (f * V**2)/(D/1000 * 2 * 9.81)
     
     def vazaoCorretiva_Universal(self, h, Q, n):
@@ -197,7 +197,9 @@ class HardyCross_rede:
         return q_corretiva
     
     def simular(self):
-        
+        '''
+        Utiliza o Hardy-Cross, com a fórmula Universal de Darcy-Weisbach.
+        '''
         
         self.dados_trechos['j_0'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_reserva_0'],
                                                                        D=self.dados_trechos['Diâmetro (mm)'],
@@ -212,13 +214,13 @@ class HardyCross_rede:
         self.dados_trechos['j_3'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_3'],
                                                                        D=self.dados_trechos['Diâmetro (mm)'],
                                                                        e=self.dados_trechos['rugosidade'])
-        
+        print(self.dados_trechos[['j_1','j_2','j_3']])
         self.dados_trechos['h_0'] = self.dados_trechos['j_0'] * self.dados_trechos['Comprimento (m)']
         
         self.dados_trechos['h_1'] = self.dados_trechos['j_1'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_1']/abs(self.dados_trechos['Q_iterativo_1'])
         self.dados_trechos['h_2'] = self.dados_trechos['j_2'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_2']/abs(self.dados_trechos['Q_iterativo_2'])
         self.dados_trechos['h_3'] = self.dados_trechos['j_3'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_3']/abs(self.dados_trechos['Q_iterativo_3'])
-        
+        print(self.dados_trechos[['h_1','h_2','h_3']])
         soma_h1 = self.dados_trechos['h_1'].sum()
         soma_h2 = self.dados_trechos['h_2'].sum()
         soma_h3 = self.dados_trechos['h_3'].sum()
@@ -276,8 +278,13 @@ class HardyCross_rede:
             delta_Q3 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_3'], 
                                                      Q=self.dados_trechos['Q_iterativo_3'], 
                                                      n=2)
-            
+#             print(self.dados_trechos['h_1'])
 #             print(delta_Q1,delta_Q2,delta_Q3)
-            print(soma_h1,soma_h2,soma_h3)
+#             print(soma_h1,soma_h2,soma_h3)
         
         print(self.dados_trechos[['Trecho','Q_iterativo_1','Q_iterativo_2','Q_iterativo_3']])
+#         print(self.dados_trechos[['Trecho', 'j_1','j_2','j_3']])
+
+        
+        # Pressão nos nós 6, 11 e 15
+        
