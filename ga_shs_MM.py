@@ -1,12 +1,18 @@
 import numpy as np
+import pandas as pd
 
-class genetic_algorithm:
+class genetic_algorithm: 
+    '''
+    Genetic Algorithm
+   
+    '''
     def __init__(self):
         print('Módulo aberto com sucesso!')
         
     def initial_pop(self,size_pop,size_cromossomo,minimum,maximum):
         '''
         Função cria uma população inicial
+        
         Input:
         size_pop: determina o número de cromossomos
         size_cromossomo: determina o tamanho de cada cromossomo
@@ -28,6 +34,9 @@ class genetic_algorithm:
         return self.filhos
     
     def funcao_obj(self):
+        '''
+        Função para teste, apagar depois.
+        '''
         self.fitness = np.zeros((self.size_pop, 1))
         for i,crom in enumerate(self.filhos):
 #             print(i, crom)
@@ -35,18 +44,26 @@ class genetic_algorithm:
         
         print(self.fitness)
         
-    def funcao_obj_rede(self, pressoes_simuladas, pressoes_reais):
+    def fitness(self, pressoes_simuladas, pressoes_reais):
         '''
-        Essa função é a função objetivo da rede, ou seja, o self.fitness deve ser o mínimo possível
+        Essa é a função fitness, onde é utilizado após passar pela função objetivo (para dados de pressões). 
+        Tem o objetivo de determinar o fitness.
+        Atualmente ele pega dados externos ao módulo, ou seja, tem que inserir dados.
         
         Input:
-        pressoes_simuladas: Pressões dos nós após realizada simulação (array-like)
-        pressoes_reais: Pressões dos nós dados (array-like)
-        
+        pressoes_simuladas: Pressões dos nós após realizada simulação (array-like, ou seja, array de array de preferência)
+        pressoes_reais: Pressões dos nós dados (array-like, ou seja, array de array de preferência)
         '''
         self.pressoes_simuladas = pressoes_simuladas
         self.pressoes_reais = pressoes_reais
+        self.fitness = np.zeros((self.size_pop, 1))
+
+        # Quanto menor, melhor!
+        for i,simulado in enumerate(self.pressoes_simuladas):
+            self.fitness[i] = sum(abs(simulado - self.pressoes_reais))
         
+        print(self.fitness)
+        return self.fitness
         
         
                 
@@ -62,9 +79,10 @@ class genetic_algorithm:
         self.elitismo = elitismo
         self.num_filhos = num_filhos        
         self.mutation = mutation
+        
         # Criando Filhos Elitistas
         self.sort_pop = np.array([x for _,x in sorted(zip(self.fitness,self.filhos))])
-        self.filhos_elitistas = np.array(self.sort_pop[-self.elitismo:,:])
+        self.filhos_elitistas = np.array(self.sort_pop[:self.elitismo,:])
         print(self.filhos_elitistas)
         
         # Criando Filhos Crossovers
@@ -84,13 +102,14 @@ class genetic_algorithm:
         # Filhos Elitistas, Filhos Crossovers e Filhos Aleatórios
         self.filhos = np.append(self.filhos, self.filhos_random, axis=0)
         print(self.filhos)
+        return self.filhos
 
     def crossover(self):
         '''
         Função tem como objetivo pegar um array com shape de e.g.(7,4) e ter como output um array com shape de mesma forma.
         Pegar metade da população para manter e fazer crossover
         '''
-        self.pais_crossover = self.sort_pop[-int(len(self.sort_pop)/2):, :]       
+        self.pais_crossover = self.sort_pop[int(len(self.sort_pop)/2):, :]       
         self.filhos_crossover = np.array([])
         for i, crom in enumerate(self.pais_crossover):
             if i == 0:
@@ -111,3 +130,154 @@ class genetic_algorithm:
                 else:
                     pass
     
+
+
+class HardyCross_rede:
+    '''
+    Válido para apenas o exemplo de rede da SHS5815/2019-1.
+    Para não precisar ficar lendo csv toda iteração.
+    '''
+    def __init__(self,dados_trechos, dados_nos,VazaoSaida_reservatorio,rugosidade):
+        '''
+
+        Input:
+        dados_trechos: dataframe (após utilizar read_csv)
+        dados_nos: dataframe (após utilizar read_csv)
+        Vazao_Saida_reservatorio: float or int, é o multiplicador para diferentes tipos de vazões
+        '''
+        self.dados_trechos = dados_trechos
+        self.dados_nos = dados_nos
+        self.VazaoSaida_reservatorio = VazaoSaida_reservatorio
+
+        self.rugosidade = rugosidade
+    
+        # Vazão chute inicial
+#         self.dados_trechos.loc[0, 'Q0_modulo'] = self.VazaoSaida_reservatorio
+
+        self.dados_trechos.loc[:, 'Q0_modulo'] = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
+        self.dados_trechos.loc[self.dados_trechos['Trecho'].str.contains('R'), 'Q_reserva_0'] = self.dados_trechos['Q0_modulo']
+        
+        # Loop sentido
+        self.dados_trechos.loc[[1,2], 'Loop_1'] = -1
+        self.dados_trechos.loc[[4,5,6,7,8], 'Loop_1'] = 1
+        
+        self.dados_trechos.loc[[1,2],'Loop_2'] = 1
+        self.dados_trechos.loc[[14,15,16,17,18,19], 'Loop_2'] = -1
+        
+        self.dados_trechos.loc[[3,9,10,11,12,13,14,15], 'Loop_3'] = 1
+        
+        # Rugosidade
+        self.dados_trechos.loc[:,'rugosidade'] = self.rugosidade
+        
+        # 
+        self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna(), 'Q_iterativo_1'] = self.dados_trechos['Q0_modulo']*self.dados_trechos['Loop_1']
+        self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna(), 'Q_iterativo_2'] = self.dados_trechos['Q0_modulo']*self.dados_trechos['Loop_2']
+        self.dados_trechos.loc[self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_3'] = self.dados_trechos['Q0_modulo']*self.dados_trechos['Loop_3']
+
+    def perdaCarga_unitaria_Universal(self, Q, D, e):
+        '''
+        Input:
+        Q: Vazão (l/s)
+        D: Diâmetro (mm)
+        e: Rugosidade (mm)
+        
+        Output:
+        Perda de Carga unitária (m/m)
+        '''
+        V = (abs(Q/1000) * 4)/(np.pi * D/1000**2)
+        Rey = V * D/1000 * 10**3
+        f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))
+        return (f * V**2)/(D/1000 * 2 * 9.81)
+    
+    def vazaoCorretiva_Universal(self, h, Q, n):
+        h_Q = h/Q
+        h_sum = h.sum()
+        h_Q_sum = h_Q.sum()
+        q_corretiva = -(h_sum)/(n*h_Q_sum)
+        return q_corretiva
+    
+    def simular(self):
+        
+        
+        self.dados_trechos['j_0'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_reserva_0'],
+                                                                       D=self.dados_trechos['Diâmetro (mm)'],
+                                                                       e=self.dados_trechos['rugosidade'])
+        
+        self.dados_trechos['j_1'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_1'],
+                                                                       D=self.dados_trechos['Diâmetro (mm)'],
+                                                                       e=self.dados_trechos['rugosidade'])
+        self.dados_trechos['j_2'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_2'],
+                                                                       D=self.dados_trechos['Diâmetro (mm)'],
+                                                                       e=self.dados_trechos['rugosidade'])
+        self.dados_trechos['j_3'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_3'],
+                                                                       D=self.dados_trechos['Diâmetro (mm)'],
+                                                                       e=self.dados_trechos['rugosidade'])
+        
+        self.dados_trechos['h_0'] = self.dados_trechos['j_0'] * self.dados_trechos['Comprimento (m)']
+        
+        self.dados_trechos['h_1'] = self.dados_trechos['j_1'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_1']/abs(self.dados_trechos['Q_iterativo_1'])
+        self.dados_trechos['h_2'] = self.dados_trechos['j_2'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_2']/abs(self.dados_trechos['Q_iterativo_2'])
+        self.dados_trechos['h_3'] = self.dados_trechos['j_3'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_3']/abs(self.dados_trechos['Q_iterativo_3'])
+        
+        soma_h1 = self.dados_trechos['h_1'].sum()
+        soma_h2 = self.dados_trechos['h_2'].sum()
+        soma_h3 = self.dados_trechos['h_3'].sum()
+        
+        delta_Q1 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_1'],
+                                            Q=self.dados_trechos['Q_iterativo_1'],
+                                            n=2)
+        delta_Q2 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_2'],
+                                            Q=self.dados_trechos['Q_iterativo_2'],
+                                            n=2)
+        delta_Q3 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_3'],
+                                            Q=self.dados_trechos['Q_iterativo_3'],
+                                            n=2)
+        
+        while (abs(soma_h1)>0.00001) or (abs(soma_h2)>0.00001) or (abs(soma_h3)>0.00001):
+            self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna(), 'Q_iterativo_1'] +=delta_Q1
+            self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna(), 'Q_iterativo_2'] +=delta_Q2
+            self.dados_trechos.loc[self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_3'] +=delta_Q3
+    
+            self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna() & self.dados_trechos['Loop_2'].notna(), 'Q_iterativo_1'] -=delta_Q2
+            self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna() & self.dados_trechos['Loop_2'].notna(), 'Q_iterativo_2'] -=delta_Q1
+    
+            self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna() & self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_1'] -=delta_Q3
+            self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna() & self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_3'] -=delta_Q1
+    
+            self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna() & self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_2'] -=delta_Q3
+            self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna() & self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_3'] -=delta_Q2
+
+            
+            self.dados_trechos['j_1'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_1'], 
+                                                              e=self.dados_trechos['rugosidade'], 
+                                                              D=self.dados_trechos['Diâmetro (mm)'])
+            self.dados_trechos['j_2'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_2'], 
+                                                              e=self.dados_trechos['rugosidade'], 
+                                                              D=self.dados_trechos['Diâmetro (mm)'])
+            self.dados_trechos['j_3'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_3'], 
+                                                              e=self.dados_trechos['rugosidade'], 
+                                                              D=self.dados_trechos['Diâmetro (mm)'])
+            
+            self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna(), 'h_1'] = self.dados_trechos['j_1']*(self.dados_trechos['Q_iterativo_1']/abs(self.dados_trechos['Q_iterativo_1']))*self.dados_trechos['Comprimento (m)']
+            self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna(), 'h_2'] = self.dados_trechos['j_2']*(self.dados_trechos['Q_iterativo_2']/abs(self.dados_trechos['Q_iterativo_2']))*self.dados_trechos['Comprimento (m)']
+            self.dados_trechos.loc[self.dados_trechos['Loop_3'].notna(), 'h_3'] = self.dados_trechos['j_3']*(self.dados_trechos['Q_iterativo_3']/abs(self.dados_trechos['Q_iterativo_3']))*self.dados_trechos['Comprimento (m)']
+
+            
+            soma_h1 = self.dados_trechos['h_1'].sum()
+            soma_h2 = self.dados_trechos['h_2'].sum()
+            soma_h3 = self.dados_trechos['h_3'].sum()
+            
+            delta_Q1 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_1'], 
+                                                     Q=self.dados_trechos['Q_iterativo_1'], 
+                                                     n=2)
+            delta_Q2 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_2'], 
+                                                     Q=self.dados_trechos['Q_iterativo_2'], 
+                                                     n=2)
+            delta_Q3 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_3'], 
+                                                     Q=self.dados_trechos['Q_iterativo_3'], 
+                                                     n=2)
+            
+#             print(delta_Q1,delta_Q2,delta_Q3)
+            print(soma_h1,soma_h2,soma_h3)
+        
+        print(self.dados_trechos[['Trecho','Q_iterativo_1','Q_iterativo_2','Q_iterativo_3']])
