@@ -134,12 +134,12 @@ class genetic_algorithm:
 
 class HardyCross_rede:
     '''
+    O objetivo desse módulo é de gerar dados de pressões após fazer a simulação da rede com o método de Hardy-Cross.
     Válido para apenas o exemplo de rede da SHS5815/2019-1.
     Para não precisar ficar lendo csv toda iteração.
     '''
     def __init__(self,dados_trechos, dados_nos,VazaoSaida_reservatorio,rugosidade):
         '''
-
         Input:
         dados_trechos: dataframe (após utilizar read_csv)
         dados_nos: dataframe (após utilizar read_csv)
@@ -150,8 +150,8 @@ class HardyCross_rede:
         self.VazaoSaida_reservatorio = VazaoSaida_reservatorio
 
         self.rugosidade = rugosidade
+        
         # Vazão chute inicial
-
         self.dados_trechos.loc[:, 'Q0_modulo'] = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
         self.dados_trechos.loc[self.dados_trechos['Trecho'].str.contains('R'), 'Q_reserva_0'] = self.dados_trechos['Q0_modulo']
         
@@ -167,13 +167,15 @@ class HardyCross_rede:
         # Rugosidade
         self.dados_trechos.loc[:,'rugosidade'] = self.rugosidade
         
-        # 
+        # Aplicando o sentido das vazões após determinada a vazão em módulo.
         self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna(), 'Q_iterativo_1'] = self.dados_trechos['Q0_modulo']*self.dados_trechos['Loop_1']
         self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna(), 'Q_iterativo_2'] = self.dados_trechos['Q0_modulo']*self.dados_trechos['Loop_2']
         self.dados_trechos.loc[self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_3'] = self.dados_trechos['Q0_modulo']*self.dados_trechos['Loop_3']
 
     def perdaCarga_unitaria_Universal(self, Q, D, e):
         '''
+        Função com o objetivo de cálcular a perda de Carga unitária utilizando a fórmula Universal.
+        
         Input:
         Q: Vazão (l/s)
         D: Diâmetro (mm)
@@ -186,10 +188,20 @@ class HardyCross_rede:
         Rey = abs(1000 * V * D/1000)/(1.003*10**(-3))
         f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
 #         f = ((64/Rey)**8 + 9.5*(np.log(((e/1000/(3.7*D/1000))+5.74/(Rey)**0.9)-(2500/Rey)**6))**-16)**0.125
-#         print(f)
         return (f * V**2)/(D/1000 * 2 * 9.81)
     
     def vazaoCorretiva_Universal(self, h, Q, n):
+        '''
+        Função com o objetivo de parte do processo do Hardy-Cross.
+        
+        Input:
+        h: Perda de Carga (m)
+        Q: Vazão (l/s)
+        n: 2 (para fórmula Universal de Darcy-Weisbach) ou 1.85 (para Hazen-Williams)
+        
+        Output:
+        q_corretiva: Vazão corretiva para iteração.
+        '''
         h_Q = h/Q
         h_sum = h.sum()
         h_Q_sum = h_Q.sum()
@@ -279,13 +291,13 @@ class HardyCross_rede:
 
         
         print(self.dados_trechos[['Trecho','Q_iterativo_1','Q_iterativo_2','Q_iterativo_3']])
-#         print(self.dados_trechos[['Trecho', 'h_1','h_2','h_3']])
         
     def resultado_pressao(self):
         '''
         Função tem como objetivo gerar os resultados da pressão para os nós 6, 11 e 15.
         '''
         nivel_Reservatorio = 228
+        
         # Primeiro definir a perde de pressão de R - 1
         j_R1 = self.perdaCarga_unitaria_Universal(Q=self.VazaoSaida_reservatorio,
                                                   D=self.dados_trechos.loc[0,'Diâmetro (mm)'],
@@ -293,7 +305,14 @@ class HardyCross_rede:
         h_R1 = j_R1 * self.dados_trechos.loc[0,'Comprimento (m)']
         P1 = nivel_Reservatorio - h_R1
         
+        # Nós 6, 11 e 15 (Cota Piezometrica => Pressão + Nível)
         P6 = P1 - abs(self.dados_trechos.loc[17,'h_2']) - abs(self.dados_trechos.loc[18,'h_2']) - abs(self.dados_trechos.loc[19,'h_2'])
         P11 = P1 - abs(self.dados_trechos.loc[8,'h_1']) - abs(self.dados_trechos.loc[7,'h_1']) - abs(self.dados_trechos.loc[6,'h_1'])
         P15 = P1 - abs(self.dados_trechos.loc[1,'h_1']) - abs(self.dados_trechos.loc[2,'h_1']) - abs(self.dados_trechos.loc[3,'h_3']) - abs(self.dados_trechos.loc[9,'h_3']) - abs(self.dados_trechos.loc[10,'h_3'])
+        
+        # Subtraindo Cota do terreno
+        P6 -= self.dados_nos.loc[5, 'Cota (m)']
+        P11 -=self.dados_nos.loc[10, 'Cota (m)']
+        P15 -=self.dados_nos.loc[14, 'Cota (m)']
+        
         return P6, P11, P15
