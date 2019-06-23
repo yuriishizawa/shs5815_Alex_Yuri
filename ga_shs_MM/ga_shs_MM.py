@@ -214,13 +214,11 @@ class HardyCross_rede:
         self.dados_trechos['j_3'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_3'],
                                                                        D=self.dados_trechos['Diâmetro (mm)'],
                                                                        e=self.dados_trechos['rugosidade'])
-        print(self.dados_trechos[['j_1','j_2','j_3']])
         self.dados_trechos['h_0'] = self.dados_trechos['j_0'] * self.dados_trechos['Comprimento (m)']
         
         self.dados_trechos['h_1'] = self.dados_trechos['j_1'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_1']/abs(self.dados_trechos['Q_iterativo_1'])
         self.dados_trechos['h_2'] = self.dados_trechos['j_2'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_2']/abs(self.dados_trechos['Q_iterativo_2'])
         self.dados_trechos['h_3'] = self.dados_trechos['j_3'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_3']/abs(self.dados_trechos['Q_iterativo_3'])
-        print(self.dados_trechos[['h_1','h_2','h_3']])
         soma_h1 = self.dados_trechos['h_1'].sum()
         soma_h2 = self.dados_trechos['h_2'].sum()
         soma_h3 = self.dados_trechos['h_3'].sum()
@@ -278,13 +276,24 @@ class HardyCross_rede:
             delta_Q3 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_3'], 
                                                      Q=self.dados_trechos['Q_iterativo_3'], 
                                                      n=2)
-#             print(self.dados_trechos['h_1'])
-#             print(delta_Q1,delta_Q2,delta_Q3)
-#             print(soma_h1,soma_h2,soma_h3)
-        
-        print(self.dados_trechos[['Trecho','Q_iterativo_1','Q_iterativo_2','Q_iterativo_3']])
-#         print(self.dados_trechos[['Trecho', 'j_1','j_2','j_3']])
 
         
-        # Pressão nos nós 6, 11 e 15
+        print(self.dados_trechos[['Trecho','Q_iterativo_1','Q_iterativo_2','Q_iterativo_3']])
+#         print(self.dados_trechos[['Trecho', 'h_1','h_2','h_3']])
         
+    def resultado_pressao(self):
+        '''
+        Função tem como objetivo gerar os resultados da pressão para os nós 6, 11 e 15.
+        '''
+        nivel_Reservatorio = 228
+        # Primeiro definir a perde de pressão de R - 1
+        j_R1 = self.perdaCarga_unitaria_Universal(Q=self.VazaoSaida_reservatorio,
+                                                  D=self.dados_trechos.loc[0,'Diâmetro (mm)'],
+                                                  e=self.dados_trechos.loc[0,'rugosidade'])
+        h_R1 = j_R1 * self.dados_trechos.loc[0,'Comprimento (m)']
+        P1 = nivel_Reservatorio - h_R1
+        
+        P6 = P1 - abs(self.dados_trechos.loc[17,'h_2']) - abs(self.dados_trechos.loc[18,'h_2']) - abs(self.dados_trechos.loc[19,'h_2'])
+        P11 = P1 - abs(self.dados_trechos.loc[8,'h_1']) - abs(self.dados_trechos.loc[7,'h_1']) - abs(self.dados_trechos.loc[6,'h_1'])
+        P15 = P1 - abs(self.dados_trechos.loc[1,'h_1']) - abs(self.dados_trechos.loc[2,'h_1']) - abs(self.dados_trechos.loc[3,'h_3']) - abs(self.dados_trechos.loc[9,'h_3']) - abs(self.dados_trechos.loc[10,'h_3'])
+        return P6, P11, P15
