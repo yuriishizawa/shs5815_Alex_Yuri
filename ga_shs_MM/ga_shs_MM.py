@@ -54,7 +54,7 @@ class genetic_algorithm:
         '''
         self.fitness = []
         for c in self.filhos:
-            print(c)
+#             print(c)
             f1 = []
             for i,q in enumerate(dados_calibracao['Vazao(l/s)']):
                 
@@ -75,43 +75,22 @@ class genetic_algorithm:
         '''
         Loop e analise situação
         '''
-        self.initial_pop(size_pop=50,
+        self.initial_pop(size_pop=30,
                          size_cromossomo=20,
                          minimum=0.01,
                          maximum=1)
         geracao = 0
-        while geracao < 10:
+        while geracao < 300:
             self.funcao_rede(dados_nos=dados_nos,
                              dados_trechos=dados_trechos,
                              dados_calibracao=dados_calibracao)
             self.selecting_mating_pool(elitismo=5,
-                                       num_filhos=50,
-                                       mutation=0.1)
+                                       num_filhos=30,
+                                       mutation=0.2)
             print()
             geracao += 1
         print('Fim')
-    
-    
-    
-    
-#     def fitness(self, pressoes_simuladas, pressoes_reais):
-#         '''
-#         Essa é a função fitness, onde é utilizado após passar pela função objetivo (para dados de pressões). 
-#         Tem o objetivo de determinar o fitness.
-#         Atualmente ele pega dados externos ao módulo, ou seja, tem que inserir dados.
-        
-#         Input:
-#         pressoes_simuladas: Pressões dos nós após realizada simulação (array-like, ou seja, array de array de preferência)
-#         pressoes_reais: Pressões dos nós dados (array-like, ou seja, array de array de preferência)
-#         '''
-
-#         # Quanto menor, melhor!
-#         for i,simulado in enumerate(self.pressoes_simuladas):
-#             self.fitness[i] = sum(abs(simulado - self.pressoes_reais))
-        
-#         print(self.fitness)
-#         return self.fitness
-        
+          
         
                 
     def selecting_mating_pool(self, elitismo, num_filhos, mutation):
@@ -189,11 +168,11 @@ class Hardy_cross_numpy:
         self.Q0_modulo = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
         
         # Diâmetros/Comprimento
-        self.diametros = dados_trechos['Diâmetro (mm)']
-        self.comprimentos = dados_trechos['Comprimento (m)']
+        self.diametros = np.array(dados_trechos['Diâmetro (mm)'])
+        self.comprimentos = np.array(dados_trechos['Comprimento (m)'])
         
         # Cota
-        self.cota = dados_nos['Cota (m)']
+        self.cota = np.array(dados_nos['Cota (m)'])
         
         # Loop sentido
         self.Sem_Loop = np.array([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
@@ -213,23 +192,24 @@ class Hardy_cross_numpy:
         self.Q_iterativo_2 = self.Q0_modulo * self.Loop_2
         self.Q_iterativo_3 = self.Q0_modulo * self.Loop_3
         
-    def perdaCarga_unitaria_Universal(self, Q, D,e):
+    def perdaCarga_unitaria_Universal(self,Q, D,e):
         '''
         
         '''
         V = abs(Q/1000 * 4)/(np.pi * (D/1000)**2)
-        Rey = abs(1000 * V * D/1000)/(1.003*10**(-3))
+        Rey = (1000 * V * D/1000)/(1.003*10**(-3))
         f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
-#         f = ((64/Rey)**8 + 9.5*(np.log(((e/1000/(3.7*D/1000))+5.74/(Rey)**0.9)-(2500/Rey)**6))**-16)**0.125
-        return ((f * V**2)/(D/1000 * 2 * 9.81))
+#         f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(((1000 * V * D/1000)/(1.003*10**(-3)))**(0.9))))**2
+
+        return (f * V**2)/(D/1000 * 2 * 9.81)
 
     def vazaoCorretiva_Universal(self, h, Q, n):
         '''
         
         '''
         h_Q = h/Q
-        h_sum = h.sum()
-        h_Q_sum = h_Q.sum()
+        h_sum = np.nansum(h)
+        h_Q_sum = np.nansum(h_Q)
         q_corretiva = -(h_sum)/(n*h_Q_sum)
         return q_corretiva
     
@@ -251,12 +231,18 @@ class Hardy_cross_numpy:
                                                       D=self.diametros,
                                                       e=self.rugosidade)
 #         print(self.j_1, self.j_2, self.j_3)
+#         print(self.comprimentos)
+#         print(self.Q_iterativo_1)
         self.h_0 = self.j_0 * self.comprimentos
-        self.h_1 = self.j_1 * self.comprimentos * self.Q_iterativo_1/abs(self.Q_iterativo_1)
-        self.h_2 = self.j_2 * self.comprimentos * self.Q_iterativo_2/abs(self.Q_iterativo_2)
-        self.h_3 = self.j_3 * self.comprimentos * self.Q_iterativo_3/abs(self.Q_iterativo_3)
+#         self.h_1 = self.j_1 * self.comprimentos * self.Q_iterativo_1/abs(self.Q_iterativo_1)
+#         self.h_2 = self.j_2 * self.comprimentos * self.Q_iterativo_2/abs(self.Q_iterativo_2)
+#         self.h_3 = self.j_3 * self.comprimentos * self.Q_iterativo_3/abs(self.Q_iterativo_3)
         
-#         print(self.h_1, self.h_2, self.h_3)
+        self.h_1 = self.j_1 * self.comprimentos * np.sign(self.Q_iterativo_1)
+        self.h_2 = self.j_2 * self.comprimentos * np.sign(self.Q_iterativo_2)
+        self.h_3 = self.j_3 * self.comprimentos * np.sign(self.Q_iterativo_3)
+        
+#         print(self.h_1)
         soma_h1 = np.nansum(self.h_1)
         soma_h2 = np.nansum(self.h_2)
         soma_h3 = np.nansum(self.h_3)
@@ -270,21 +256,21 @@ class Hardy_cross_numpy:
         delta_Q3 = self.vazaoCorretiva_Universal(h=self.h_3,
                                                  Q=self.Q_iterativo_3,
                                                  n=2)
-        
+#         print(delta_Q1)
         while (abs(soma_h1)>0.001) or (abs(soma_h2)>0.001) or (abs(soma_h3)>0.001):
             # !
             self.Q_iterativo_1 += delta_Q1*abs(self.Loop_1)
             self.Q_iterativo_2 += delta_Q2*abs(self.Loop_2)
             self.Q_iterativo_3 += delta_Q3*abs(self.Loop_3)
             
-            self.Q_iterativo_1 -= delta_Q2*abs(self.Loop_1_2)
-            self.Q_iterativo_2 -= delta_Q1*abs(self.Loop_1_2)
+            self.Q_iterativo_1 -= delta_Q2*self.Loop_1_2
+            self.Q_iterativo_2 -= delta_Q1*self.Loop_1_2
             
-            self.Q_iterativo_1 -= delta_Q3*abs(self.Loop_1_3)
-            self.Q_iterativo_3 -= delta_Q1*abs(self.Loop_1_3)
+            self.Q_iterativo_1 -= delta_Q3*self.Loop_1_3
+            self.Q_iterativo_3 -= delta_Q1*self.Loop_1_3
             
-            self.Q_iterativo_2 -= delta_Q3*abs(self.Loop_2_3)
-            self.Q_iterativo_3 -= delta_Q2*abs(self.Loop_2_3)
+            self.Q_iterativo_2 -= delta_Q3*self.Loop_2_3
+            self.Q_iterativo_3 -= delta_Q2*self.Loop_2_3
             
             self.j_1 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_1,
                                                           D=self.diametros,
@@ -296,9 +282,14 @@ class Hardy_cross_numpy:
                                                           D=self.diametros,
                                                           e=self.rugosidade)
             
-            self.h_1 = self.j_1 * self.comprimentos * self.Q_iterativo_1/abs(self.Q_iterativo_1)
-            self.h_2 = self.j_2 * self.comprimentos * self.Q_iterativo_2/abs(self.Q_iterativo_2)
-            self.h_3 = self.j_3 * self.comprimentos * self.Q_iterativo_3/abs(self.Q_iterativo_3)
+#             self.h_1 = self.j_1 * self.comprimentos * self.Q_iterativo_1/abs(self.Q_iterativo_1)
+#             self.h_2 = self.j_2 * self.comprimentos * self.Q_iterativo_2/abs(self.Q_iterativo_2)
+#             self.h_3 = self.j_3 * self.comprimentos * self.Q_iterativo_3/abs(self.Q_iterativo_3)
+            
+            self.h_1 = self.j_1 * self.comprimentos * np.sign(self.Q_iterativo_1)
+            self.h_2 = self.j_2 * self.comprimentos * np.sign(self.Q_iterativo_2)
+            self.h_3 = self.j_3 * self.comprimentos * np.sign(self.Q_iterativo_3)
+            
             
             soma_h1 = np.nansum(self.h_1)
             soma_h2 = np.nansum(self.h_2)
