@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 class genetic_algorithm: 
     '''
     Genetic Algorithm
-   
     '''
     def __init__(self):
         print('Módulo aberto com sucesso!')
@@ -29,10 +29,11 @@ class genetic_algorithm:
         
         self.init_pop = np.random.uniform(low=self.minimum, 
                                            high=self.maximum, 
-                                           size=(self.size_pop,self.size_cromossomo))
+                                           size=(self.size_pop,self.size_cromossomo)).astype('float16')
         self.filhos = self.init_pop
         return self.filhos
     
+    ##### Apagar?
     def funcao_obj(self):
         '''
         Função para teste, apagar depois.
@@ -43,27 +44,73 @@ class genetic_algorithm:
             self.fitness[i] = 5.1*crom[0] - crom[1]*crom[0] + crom[2]*1.4 - crom[2]*crom[2]*2.1 + 3*crom[0]
         
         print(self.fitness)
-        
-    def fitness(self, pressoes_simuladas, pressoes_reais):
+    #####
+    
+    def funcao_rede(self, dados_nos, dados_trechos, dados_calibracao):
         '''
-        Essa é a função fitness, onde é utilizado após passar pela função objetivo (para dados de pressões). 
-        Tem o objetivo de determinar o fitness.
-        Atualmente ele pega dados externos ao módulo, ou seja, tem que inserir dados.
-        
+        Função com o objetivo de fazer o loop?
         Input:
-        pressoes_simuladas: Pressões dos nós após realizada simulação (array-like, ou seja, array de array de preferência)
-        pressoes_reais: Pressões dos nós dados (array-like, ou seja, array de array de preferência)
-        '''
-        self.pressoes_simuladas = pressoes_simuladas
-        self.pressoes_reais = pressoes_reais
-        self.fitness = np.zeros((self.size_pop, 1))
-
-        # Quanto menor, melhor!
-        for i,simulado in enumerate(self.pressoes_simuladas):
-            self.fitness[i] = sum(abs(simulado - self.pressoes_reais))
         
-        print(self.fitness)
-        return self.fitness
+        '''
+        self.fitness = []
+        for c in self.filhos:
+            print(c)
+            f1 = []
+            for i,q in enumerate(dados_calibracao['Vazao(l/s)']):
+                
+#                 rede = HardyCross_rede(dados_nos=dados_nos, dados_trechos=dados_trechos,VazaoSaida_reservatorio=q,rugosidade=c)
+#                 rede.simular()
+                rede = Hardy_cross_numpy(dados_nos=dados_nos,
+                                         dados_trechos=dados_trechos,
+                                         VazaoSaida_reservatorio=q,
+                                         rugosidade=c)
+                rede.simular()
+                
+                f1.append(sum(abs(np.array(rede.resultado_pressao()) - np.array(dados_calibracao.loc[i,['P_no6(m)','P_no11(m)','P_no15(m)']]))))
+            self.fitness.append(sum(f1))
+        print(min(self.fitness))
+#             print(self.fitness)
+
+    def jarvis(self, dados_nos, dados_trechos, dados_calibracao):
+        '''
+        Loop e analise situação
+        '''
+        self.initial_pop(size_pop=50,
+                         size_cromossomo=20,
+                         minimum=0.01,
+                         maximum=1)
+        geracao = 0
+        while geracao < 10:
+            self.funcao_rede(dados_nos=dados_nos,
+                             dados_trechos=dados_trechos,
+                             dados_calibracao=dados_calibracao)
+            self.selecting_mating_pool(elitismo=5,
+                                       num_filhos=50,
+                                       mutation=0.1)
+            print()
+            geracao += 1
+        print('Fim')
+    
+    
+    
+    
+#     def fitness(self, pressoes_simuladas, pressoes_reais):
+#         '''
+#         Essa é a função fitness, onde é utilizado após passar pela função objetivo (para dados de pressões). 
+#         Tem o objetivo de determinar o fitness.
+#         Atualmente ele pega dados externos ao módulo, ou seja, tem que inserir dados.
+        
+#         Input:
+#         pressoes_simuladas: Pressões dos nós após realizada simulação (array-like, ou seja, array de array de preferência)
+#         pressoes_reais: Pressões dos nós dados (array-like, ou seja, array de array de preferência)
+#         '''
+
+#         # Quanto menor, melhor!
+#         for i,simulado in enumerate(self.pressoes_simuladas):
+#             self.fitness[i] = sum(abs(simulado - self.pressoes_reais))
+        
+#         print(self.fitness)
+#         return self.fitness
         
         
                 
@@ -75,7 +122,7 @@ class genetic_algorithm:
         num_filhos: Número de filhos
         mutation: Chance de multação
         '''
-        
+#         print(self.fitness)
         self.elitismo = elitismo
         self.num_filhos = num_filhos        
         self.mutation = mutation
@@ -83,26 +130,26 @@ class genetic_algorithm:
         # Criando Filhos Elitistas
         self.sort_pop = np.array([x for _,x in sorted(zip(self.fitness,self.filhos))])
         self.filhos_elitistas = np.array(self.sort_pop[:self.elitismo,:])
-        print(self.filhos_elitistas)
+#         print(self.filhos_elitistas)
         
         # Criando Filhos Crossovers
         self.crossover()
         
         # Filhos Elitistas e Filhos Crossovers
         self.filhos = np.append(self.filhos_elitistas, self.filhos_crossover,axis=0)
-        print(np.shape(self.filhos))
+#         print(np.shape(self.filhos))
         
         # Criando Filhos Aleatórios
         self.num_filhos_random = self.num_filhos-np.shape(self.filhos)[0]
         self.filhos_random = np.random.uniform(low=self.minimum, 
                                            high=self.maximum, 
                                            size=(self.num_filhos_random,self.size_cromossomo))
-        print(self.filhos_crossover)
+#         print(self.filhos_crossover)
         
         # Filhos Elitistas, Filhos Crossovers e Filhos Aleatórios
         self.filhos = np.append(self.filhos, self.filhos_random, axis=0)
-        print(self.filhos)
-        return self.filhos
+#         print(self.filhos)
+#         return self.filhos
 
     def crossover(self):
         '''
@@ -131,8 +178,167 @@ class genetic_algorithm:
                     pass
     
 
+class Hardy_cross_numpy:
+    def __init__(self, dados_trechos, dados_nos, VazaoSaida_reservatorio,rugosidade):
+        '''
+        
+        '''
+        self.VazaoSaida_reservatorio = VazaoSaida_reservatorio
+        
+        # Vazão chute inicial
+        self.Q0_modulo = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
+        
+        # Diâmetros/Comprimento
+        self.diametros = dados_trechos['Diâmetro (mm)']
+        self.comprimentos = dados_trechos['Comprimento (m)']
+        
+        # Cota
+        self.cota = dados_nos['Cota (m)']
+        
+        # Loop sentido
+        self.Sem_Loop = np.array([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+        self.Loop_1 = np.array([0,-1,-1,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0])
+        self.Loop_2 = np.array([0,1,1,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1])
+        self.Loop_3 = np.array([0,0,0,1,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0])
 
-class HardyCross_rede:
+        self.Loop_1_2 = np.array([0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+        self.Loop_1_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+        self.Loop_2_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0])
+        
+        # Rugosidade
+        self.rugosidade = rugosidade
+        
+        self.Q_r_1 = self.Q0_modulo * self.Sem_Loop
+        self.Q_iterativo_1 = self.Q0_modulo * self.Loop_1
+        self.Q_iterativo_2 = self.Q0_modulo * self.Loop_2
+        self.Q_iterativo_3 = self.Q0_modulo * self.Loop_3
+        
+    def perdaCarga_unitaria_Universal(self, Q, D,e):
+        '''
+        
+        '''
+        V = abs(Q/1000 * 4)/(np.pi * (D/1000)**2)
+        Rey = abs(1000 * V * D/1000)/(1.003*10**(-3))
+        f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
+#         f = ((64/Rey)**8 + 9.5*(np.log(((e/1000/(3.7*D/1000))+5.74/(Rey)**0.9)-(2500/Rey)**6))**-16)**0.125
+        return ((f * V**2)/(D/1000 * 2 * 9.81))
+
+    def vazaoCorretiva_Universal(self, h, Q, n):
+        '''
+        
+        '''
+        h_Q = h/Q
+        h_sum = h.sum()
+        h_Q_sum = h_Q.sum()
+        q_corretiva = -(h_sum)/(n*h_Q_sum)
+        return q_corretiva
+    
+    def simular(self):
+        '''
+        
+        '''
+#         print('simuladno')
+        self.j_0 = self.perdaCarga_unitaria_Universal(Q=self.Q_r_1,
+                                                      D=self.diametros,
+                                                      e=self.rugosidade)
+        self.j_1 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_1,
+                                                      D=self.diametros,
+                                                      e=self.rugosidade)
+        self.j_2 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_2,
+                                                      D=self.diametros,
+                                                      e=self.rugosidade)
+        self.j_3 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_3,
+                                                      D=self.diametros,
+                                                      e=self.rugosidade)
+#         print(self.j_1, self.j_2, self.j_3)
+        self.h_0 = self.j_0 * self.comprimentos
+        self.h_1 = self.j_1 * self.comprimentos * self.Q_iterativo_1/abs(self.Q_iterativo_1)
+        self.h_2 = self.j_2 * self.comprimentos * self.Q_iterativo_2/abs(self.Q_iterativo_2)
+        self.h_3 = self.j_3 * self.comprimentos * self.Q_iterativo_3/abs(self.Q_iterativo_3)
+        
+#         print(self.h_1, self.h_2, self.h_3)
+        soma_h1 = np.nansum(self.h_1)
+        soma_h2 = np.nansum(self.h_2)
+        soma_h3 = np.nansum(self.h_3)
+#         print(soma_h1,soma_h2,soma_h3)
+        delta_Q1 = self.vazaoCorretiva_Universal(h=self.h_1,
+                                                 Q=self.Q_iterativo_1,
+                                                 n=2)
+        delta_Q2 = self.vazaoCorretiva_Universal(h=self.h_2,
+                                                 Q=self.Q_iterativo_2,
+                                                 n=2)
+        delta_Q3 = self.vazaoCorretiva_Universal(h=self.h_3,
+                                                 Q=self.Q_iterativo_3,
+                                                 n=2)
+        
+        while (abs(soma_h1)>0.001) or (abs(soma_h2)>0.001) or (abs(soma_h3)>0.001):
+            # !
+            self.Q_iterativo_1 += delta_Q1*abs(self.Loop_1)
+            self.Q_iterativo_2 += delta_Q2*abs(self.Loop_2)
+            self.Q_iterativo_3 += delta_Q3*abs(self.Loop_3)
+            
+            self.Q_iterativo_1 -= delta_Q2*abs(self.Loop_1_2)
+            self.Q_iterativo_2 -= delta_Q1*abs(self.Loop_1_2)
+            
+            self.Q_iterativo_1 -= delta_Q3*abs(self.Loop_1_3)
+            self.Q_iterativo_3 -= delta_Q1*abs(self.Loop_1_3)
+            
+            self.Q_iterativo_2 -= delta_Q3*abs(self.Loop_2_3)
+            self.Q_iterativo_3 -= delta_Q2*abs(self.Loop_2_3)
+            
+            self.j_1 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_1,
+                                                          D=self.diametros,
+                                                          e=self.rugosidade)
+            self.j_2 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_2,
+                                                          D=self.diametros,
+                                                          e=self.rugosidade)
+            self.j_3 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_3,
+                                                          D=self.diametros,
+                                                          e=self.rugosidade)
+            
+            self.h_1 = self.j_1 * self.comprimentos * self.Q_iterativo_1/abs(self.Q_iterativo_1)
+            self.h_2 = self.j_2 * self.comprimentos * self.Q_iterativo_2/abs(self.Q_iterativo_2)
+            self.h_3 = self.j_3 * self.comprimentos * self.Q_iterativo_3/abs(self.Q_iterativo_3)
+            
+            soma_h1 = np.nansum(self.h_1)
+            soma_h2 = np.nansum(self.h_2)
+            soma_h3 = np.nansum(self.h_3)
+            
+            delta_Q1 = self.vazaoCorretiva_Universal(h=self.h_1,
+                                                     Q=self.Q_iterativo_1,
+                                                     n=2)
+            delta_Q2 = self.vazaoCorretiva_Universal(h=self.h_2,
+                                                     Q=self.Q_iterativo_2,
+                                                     n=2)
+            delta_Q3 = self.vazaoCorretiva_Universal(h=self.h_3,
+                                                     Q=self.Q_iterativo_3,
+                                                     n=2)
+            
+#         print(self.Q_iterativo_1)
+#         print(self.Q_iterativo_2)
+#         print(self.Q_iterativo_3)
+    def resultado_pressao(self):
+        '''
+            
+        '''
+        nivel_Reservatorio = 228
+            
+        j_R1 = self.perdaCarga_unitaria_Universal(Q=self.VazaoSaida_reservatorio,
+                                                      D=self.diametros[0],
+                                                      e=self.rugosidade[0])
+#         print(j_R1)
+        h_R1 = j_R1 * self.comprimentos[0]
+        P1 = nivel_Reservatorio - h_R1
+#         print(P1)
+        P6 = P1 - self.cota[5] - abs(self.h_2[17]) - abs(self.h_2[18]) - abs(self.h_2[19])
+        P11 = P1 - self.cota[10] - abs(self.h_1[8]) - abs(self.h_1[7]) - abs(self.h_1[6])
+        P15 = P1 - self.cota[14] -abs(self.h_1[1]) - abs(self.h_1[2]) - abs(self.h_3[3]) - abs(self.h_3[9]) - abs(self.h_3[10])
+#         print(P6)
+        return P6, P11, P15
+            
+    
+
+class HardyCross_rede_pandas:
     '''
     O objetivo desse módulo é de gerar dados de pressões após fazer a simulação da rede com o método de Hardy-Cross.
     Válido para apenas o exemplo de rede da SHS5815/2019-1.
@@ -154,6 +360,7 @@ class HardyCross_rede:
         # Vazão chute inicial
         self.dados_trechos.loc[:, 'Q0_modulo'] = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
         self.dados_trechos.loc[self.dados_trechos['Trecho'].str.contains('R'), 'Q_reserva_0'] = self.dados_trechos['Q0_modulo']
+#         self.dados_trechos.loc[0,'Q_reserva_0'] = self.dados_trechos['Q0_modulo']
         
         # Loop sentido
         self.dados_trechos.loc[[1,2], 'Loop_1'] = -1
@@ -188,7 +395,7 @@ class HardyCross_rede:
         Rey = abs(1000 * V * D/1000)/(1.003*10**(-3))
         f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
 #         f = ((64/Rey)**8 + 9.5*(np.log(((e/1000/(3.7*D/1000))+5.74/(Rey)**0.9)-(2500/Rey)**6))**-16)**0.125
-        return (f * V**2)/(D/1000 * 2 * 9.81)
+        return ((f * V**2)/(D/1000 * 2 * 9.81))
     
     def vazaoCorretiva_Universal(self, h, Q, n):
         '''
@@ -207,7 +414,7 @@ class HardyCross_rede:
         h_Q_sum = h_Q.sum()
         q_corretiva = -(h_sum)/(n*h_Q_sum)
         return q_corretiva
-    
+
     def simular(self):
         '''
         Utiliza o Hardy-Cross, com a fórmula Universal de Darcy-Weisbach.
@@ -226,15 +433,19 @@ class HardyCross_rede:
         self.dados_trechos['j_3'] = self.perdaCarga_unitaria_Universal(Q=self.dados_trechos['Q_iterativo_3'],
                                                                        D=self.dados_trechos['Diâmetro (mm)'],
                                                                        e=self.dados_trechos['rugosidade'])
+#         print(self.dados_trechos[['j_1','j_2','j_3']])
+
         self.dados_trechos['h_0'] = self.dados_trechos['j_0'] * self.dados_trechos['Comprimento (m)']
         
         self.dados_trechos['h_1'] = self.dados_trechos['j_1'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_1']/abs(self.dados_trechos['Q_iterativo_1'])
         self.dados_trechos['h_2'] = self.dados_trechos['j_2'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_2']/abs(self.dados_trechos['Q_iterativo_2'])
         self.dados_trechos['h_3'] = self.dados_trechos['j_3'] * self.dados_trechos['Comprimento (m)'] * self.dados_trechos['Q_iterativo_3']/abs(self.dados_trechos['Q_iterativo_3'])
+        
+#         print(self.dados_trechos[['h_1', 'h_2', 'h_3']])
         soma_h1 = self.dados_trechos['h_1'].sum()
         soma_h2 = self.dados_trechos['h_2'].sum()
         soma_h3 = self.dados_trechos['h_3'].sum()
-        
+#         print(soma_h1)
         delta_Q1 = self.vazaoCorretiva_Universal(h=self.dados_trechos['h_1'],
                                             Q=self.dados_trechos['Q_iterativo_1'],
                                             n=2)
@@ -245,7 +456,7 @@ class HardyCross_rede:
                                             Q=self.dados_trechos['Q_iterativo_3'],
                                             n=2)
         
-        while (abs(soma_h1)>0.00001) or (abs(soma_h2)>0.00001) or (abs(soma_h3)>0.00001):
+        while (abs(soma_h1)>0.0001) or (abs(soma_h2)>0.0001) or (abs(soma_h3)>0.0001):
             self.dados_trechos.loc[self.dados_trechos['Loop_1'].notna(), 'Q_iterativo_1'] +=delta_Q1
             self.dados_trechos.loc[self.dados_trechos['Loop_2'].notna(), 'Q_iterativo_2'] +=delta_Q2
             self.dados_trechos.loc[self.dados_trechos['Loop_3'].notna(), 'Q_iterativo_3'] +=delta_Q3
