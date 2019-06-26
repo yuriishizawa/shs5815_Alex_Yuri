@@ -19,7 +19,12 @@ class HardyCross_rede:
         self.p = p
         self.Q_R1 = Q_R1
         self.a[:, 3] = self.a[:, 3] * self.Q_R1/7
-        self.e = e
+        self.e_rede = [0 for i in range(24)]
+        for i in list(range(8)):
+            self.e_rede[i] = e[i]
+        for i in list(range(8,21)):
+            self.e_rede[i+2] = e[i]
+        self.e_rede[8], self.e_rede[9], self.e_rede[22], self.e_rede[23] = e[1], e[2], e[10], e[11]
         
     def universal(self):
         '''
@@ -35,7 +40,7 @@ class HardyCross_rede:
         '''
         v = self.a[:,3]*4/(((self.a[:,2]/1000)**2)*math.pi*1000) #vetor de velocidades
         rey = abs(v*self.a[:,2]*10**(3)) #vetor de numeros de reynolds
-        f = 0.25/(np.log10((self.e/(3.7*self.a[:,2])) + (5.74/rey**0.9)))**2 #vetor de f
+        f = 0.25/(np.log10((self.e_rede/(3.7*self.a[:,2])) + (5.74/rey**0.9)))**2 #vetor de f
         h = (f*self.a[:,1]*v**2)/((self.a[:,2]/1000)*2*9.81)*(self.a[:,3]/abs(self.a[:,3])) #vetor de perda de carga
         h_q = h/self.a[:,3] #vetor de delta h sobre delta q
         return h, h_q
@@ -50,7 +55,7 @@ class HardyCross_rede:
         return delta_q, modulo_h
     
     def simular(self):
-        self.e[8], self.e[9], self.e[22], self.e[23] = self.e[1], self.e[2], self.e[10], self.e[11]
+        #self.e[8], self.e[9], self.e[22], self.e[23] = self.e[1], self.e[2], self.e[10], self.e[11]
         delta_q, modulo_h = self.teste_u()[0], self.teste_u()[1]
         while max(modulo_h) >= 0.001:
             for trecho in list(range(1,8)):
