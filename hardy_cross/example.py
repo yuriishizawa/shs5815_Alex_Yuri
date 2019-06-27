@@ -5,7 +5,7 @@ import numpy as np
 a = np.loadtxt('trechos.txt', skiprows=1, usecols=range(1,5))
 p = np.loadtxt('nos.txt', skiprows=1, usecols=range(1,3))
 Q_R1 = 1 #vazão que sai do reservatório
-e = [0.1 for i in range(21)] #rugosidade dos trechos
+e = [0.1 for i in range(20)] #rugosidade dos trechos
 
 #hardy-cross
 resultados = HardyCross_rede(a, p, Q_R1, e)
