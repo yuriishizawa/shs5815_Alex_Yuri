@@ -22,7 +22,7 @@ class HardyCross_rede:
         self.e_rede = [0 for i in range(24)]
         for i in list(range(8)):
             self.e_rede[i] = e[i]
-        for i in list(range(8,21)):
+        for i in list(range(8,20)):
             self.e_rede[i+2] = e[i]
         self.e_rede[8], self.e_rede[9], self.e_rede[22], self.e_rede[23] = e[1], e[2], e[10], e[11]
         
