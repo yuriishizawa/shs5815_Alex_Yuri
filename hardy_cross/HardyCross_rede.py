@@ -15,8 +15,8 @@ class HardyCross_rede:
         Q_R1: float or int, é o multiplicador para diferentes tipos de vazões
         e: rugosidade dos trechos
         '''
-        self.a = a
-        self.p = p
+        self.a = np.array(a)
+        self.p = np.array(p)
         self.Q_R1 = Q_R1
         self.a[:, 3] = self.a[:, 3] * self.Q_R1/7
         self.e_rede = [0 for i in range(24)]
@@ -25,6 +25,7 @@ class HardyCross_rede:
         for i in list(range(8,20)):
             self.e_rede[i+2] = e[i]
         self.e_rede[8], self.e_rede[9], self.e_rede[22], self.e_rede[23] = e[1], e[2], e[10], e[11]
+        self.h = self.universal()[0]        
         
     def universal(self):
         '''
@@ -57,6 +58,7 @@ class HardyCross_rede:
     def simular(self):
         #self.e[8], self.e[9], self.e[22], self.e[23] = self.e[1], self.e[2], self.e[10], self.e[11]
         delta_q, modulo_h = self.teste_u()[0], self.teste_u()[1]
+        
         while max(modulo_h) >= 0.001:
             for trecho in list(range(1,8)):
                 self.a[trecho,3] += delta_q[0]
@@ -76,14 +78,15 @@ class HardyCross_rede:
             self.a[11,3] -= delta_q[2]
             self.a[22,3] -= delta_q[1]
             self.a[23,3] -= delta_q[1]
-            self.universal()
             delta_q, modulo_h = self.teste_u()[0], self.teste_u()[1]
-        return self.a, self.universal()
+           
+#        return self.a
     
-    def p_calc(self):
-        carga6 = self.simular()[1][0][0] + self.simular()[1][0][15] + self.simular()[1][0][14] + self.simular()[1][0][13]
-        carga11 = self.simular()[1][0][0] - self.simular()[1][0][7] - self.simular()[1][0][6] - self.simular()[1][0][5]
-        carga15 = self.simular()[1][0][0] + self.simular()[1][0][15] + self.simular()[1][0][14] + self.simular()[1][0][13] + self.simular()[1][0][12] + self.simular()[1][0][21] + self.simular()[1][0][20] + self.simular()[1][0][19]
+    def resultado_pressao(self):
+        
+        carga6 = self.h[0] + self.h[15] + self.h[14] + self.h[13]
+        carga11 = self.h[0] - self.h[7] - self.h[6] - self.h[5]
+        carga15 = self.h[0] + self.h[15] + self.h[14] + self.h[13] + self.h[12] + self.h[21] + self.h[20] + self.h[19]
         P6 = self.p[0,0] - self.p[6,0] - carga6
         P11 = self.p[0,0] - self.p[11,0] - carga11
         P15 = self.p[0,0] - self.p[15,0] - carga15
