@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import math
+# import matplotlib.pyplot as plt
+
 # from numba import jitclass
 # from numba import float32, int32
 
@@ -36,19 +38,6 @@ class genetic_algorithm:
         self.filhos = self.init_pop
         return self.filhos
     
-    ##### Apagar?
-#     def funcao_obj(self):
-#         '''
-#         Função para teste, apagar depois.
-#         '''
-#         self.fitness = np.zeros((self.size_pop, 1))
-#         for i,crom in enumerate(self.filhos):
-# #             print(i, crom)
-#             self.fitness[i] = 5.1*crom[0] - crom[1]*crom[0] + crom[2]*1.4 - crom[2]*crom[2]*2.1 + 3*crom[0]
-        
-#         print(self.fitness)
-    #####
-    
     def funcao_rede(self, dados_nos, dados_trechos, dados_calibracao):
         '''
         Função com o objetivo de fazer o loop?
@@ -61,40 +50,31 @@ class genetic_algorithm:
             f1 = []
 #             for i,q in enumerate(dados_calibracao['Vazao(l/s)']):
             for i,q in enumerate(dados_calibracao):
-                
-#                 rede = HardyCross_rede(dados_nos=dados_nos, dados_trechos=dados_trechos,VazaoSaida_reservatorio=q,rugosidade=c)
-#                 rede.simular()
-#                 print(type(q[0]))
                 rede = Hardy_cross_numpy(dados_nos=dados_nos,
                                          dados_trechos=dados_trechos,
                                          VazaoSaida_reservatorio=q[0],rugosidade=c)
                 rede.simular()
-                
-#                 f1.append(sum(abs(np.array(rede.resultado_pressao()) - np.array(dados_calibracao.loc[i,['P_no6(m)','P_no11(m)','P_no15(m)']]))))
                 f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:])))
             self.fitness.append(sum(f1))
         print(min(self.fitness))
-#             print(self.fitness)
 
     def jarvis(self, dados_nos, dados_trechos, dados_calibracao):
         '''
         Loop e analise situação
         '''
-        self.initial_pop(size_pop=50,
+        self.initial_pop(size_pop=100,
                          size_cromossomo=20,
                          minimum=0.01,
                          maximum=1)
         geracao = 0
-        while geracao < 500:
+        while geracao < 200:
             self.funcao_rede(dados_nos=dados_nos,dados_trechos=dados_trechos,dados_calibracao=dados_calibracao)
             self.selecting_mating_pool(elitismo=5,
-                                       num_filhos=50,
+                                       num_filhos=100,
                                        mutation=0.2)
             print()
             geracao += 1
         print('Fim')
-          
-        
                 
     def selecting_mating_pool(self, elitismo, num_filhos, mutation):
         '''
@@ -112,21 +92,18 @@ class genetic_algorithm:
         # Criando Filhos Elitistas
         self.sort_pop = np.array([x for _,x in sorted(zip(self.fitness,self.filhos))])
         self.filhos_elitistas = np.array(self.sort_pop[:self.elitismo,:])
-#         print(self.filhos_elitistas)
         
         # Criando Filhos Crossovers
         self.crossover()
         
         # Filhos Elitistas e Filhos Crossovers
         self.filhos = np.append(self.filhos_elitistas, self.filhos_crossover,axis=0)
-#         print(np.shape(self.filhos))
         
         # Criando Filhos Aleatórios
         self.num_filhos_random = self.num_filhos-np.shape(self.filhos)[0]
         self.filhos_random = np.random.uniform(low=self.minimum, 
                                            high=self.maximum, 
                                            size=(self.num_filhos_random,self.size_cromossomo))
-#         print(self.filhos_crossover)
         
         # Filhos Elitistas, Filhos Crossovers e Filhos Aleatórios
         self.filhos = np.append(self.filhos, self.filhos_random, axis=0)
@@ -183,7 +160,7 @@ class Hardy_cross_numpy:
         self.Loop_3 = np.array([0,0,0,1,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0])
 
         self.Loop_1_2 = np.array([0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-        self.Loop_1_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+#         self.Loop_1_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
         self.Loop_2_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0])
         
         # Rugosidade
@@ -198,10 +175,19 @@ class Hardy_cross_numpy:
         '''
         
         '''
-        V = abs(Q/1000 * 4)/(np.pi * (D/1000)**2)
-        Rey = (1000 * V * D/1000)/(1.003*10**(-3))
-        f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
-        return (f * V**2)/(D/1000 * 2 * 9.81)
+#         V = abs(Q/1000 * 4)/(np.pi * (D/1000)**2)
+        V = abs(Q) * 4/(0.00314 * D**2)
+
+#         Rey = (1000 * V * D/1000)/(1.003*10**(-3))
+        Rey = (V * D)/(0.001)
+#         f = (0.25)/(np.log10((e/1000)/(3.7*D/1000)+5.74/(Rey**(0.9))))**2
+#         f = (0.25)/(np.log10((e)/(3.7*D)+5.74/(Rey**(0.9))))**2
+
+        f = (0.25)/(np.log10(e/(3.7*D)+5.74/(np.power(Rey,0.9))))**2
+#         f = (0.25)/(map(np.log10),)**2
+
+    
+        return (f * V**2)/(D*0.0196)
     
     def vazaoCorretiva_Universal(self, h, Q, n):
         '''
@@ -209,16 +195,9 @@ class Hardy_cross_numpy:
         '''
 #         print(h)
         h_Q = h/Q
-#         h_sum = np.sum(h)
-#         print(np.nan_to_num(h_Q))
-        
-#         h_Q_sum = np.sum(h_Q)
-#         print(h)
-        h_sum = h.sum()
-        h_Q_sum = np.nan_to_num(h_Q).sum()
-#         print(h_Q_sum)
-        q_corretiva = -(h_sum)/(n*h_Q_sum)
-        return q_corretiva
+        h_Q[np.isnan(h_Q)] = 0
+        return -(h.sum())/(n*h_Q.sum())
+    
     def simular(self):
         '''
         
@@ -242,36 +221,56 @@ class Hardy_cross_numpy:
         self.h_1 = j_1 * self.comprimentos * np.sign(self.Q_iterativo_1)
         self.h_2 = j_2 * self.comprimentos * np.sign(self.Q_iterativo_2)
         self.h_3 = j_3 * self.comprimentos * np.sign(self.Q_iterativo_3)
+    
+#         self.h_1 = j_1 * self.comprimentos
+#         self.h_2 = j_2 * self.comprimentos
+#         self.h_3 = j_3 * self.comprimentos
         
 #         print(self.h_1)
-        soma_h1 = self.h_1.sum()
-        soma_h2 = self.h_2.sum()
-        soma_h3 = self.h_3.sum()
+#         soma_h1 = self.h_1.sum()
+#         soma_h2 = self.h_2.sum()
+#         soma_h3 = self.h_3.sum()
 #         print(soma_h1,soma_h2,soma_h3)
+        delta_Q1 = 10
+        delta_Q2 = 10
+        delta_Q3 = 10
+        
 
-        delta_Q1 = self.vazaoCorretiva_Universal(h=self.h_1,
-                                                 Q=self.Q_iterativo_1,
-                                                 n=2)
-        delta_Q2 = self.vazaoCorretiva_Universal(h=self.h_2,
-                                                 Q=self.Q_iterativo_2,
-                                                 n=2)
-        delta_Q3 = self.vazaoCorretiva_Universal(h=self.h_3,
-                                                 Q=self.Q_iterativo_3,
-                                                 n=2)
 #         print(delta_Q1)
-        while (abs(soma_h1)>0.001) or (abs(soma_h2)>0.001) or (abs(soma_h3)>0.001):
+#         while (abs(soma_h1)>0.001) or (abs(soma_h2)>0.001) or (abs(soma_h3)>0.001):
+        while (abs(delta_Q1) > 0.01) or (abs(delta_Q2) > 0.01) or (abs(delta_Q3) > 0.01):
+            
+            delta_Q1 = self.vazaoCorretiva_Universal(h=self.h_1,
+                                                     Q=self.Q_iterativo_1,
+                                                     n=2)
+            delta_Q2 = self.vazaoCorretiva_Universal(h=self.h_2,
+                                                     Q=self.Q_iterativo_2,
+                                                     n=2)
+            delta_Q3 = self.vazaoCorretiva_Universal(h=self.h_3,
+                                                     Q=self.Q_iterativo_3,
+                                                     n=2)
             self.Q_iterativo_1 += delta_Q1*abs(self.Loop_1)
             self.Q_iterativo_2 += delta_Q2*abs(self.Loop_2)
             self.Q_iterativo_3 += delta_Q3*abs(self.Loop_3)
             
+#             self.Q_iterativo_1 += np.dot(delta_Q1,abs(self.Loop_1))
+#             self.Q_iterativo_2 += np.dot(delta_Q2,abs(self.Loop_2))
+#             self.Q_iterativo_3 += np.dot(delta_Q3,abs(self.Loop_3))
+            
             self.Q_iterativo_1 -= delta_Q2*self.Loop_1_2
             self.Q_iterativo_2 -= delta_Q1*self.Loop_1_2
+            
+#             self.Q_iterativo_1 -= np.dot(delta_Q2,self.Loop_1_2)
+#             self.Q_iterativo_2 -= np.dot(delta_Q1,self.Loop_1_2)
             
 #             self.Q_iterativo_1 -= delta_Q3*self.Loop_1_3
 #             self.Q_iterativo_3 -= delta_Q1*self.Loop_1_3
             
             self.Q_iterativo_2 -= delta_Q3*self.Loop_2_3
             self.Q_iterativo_3 -= delta_Q2*self.Loop_2_3
+            
+#             self.Q_iterativo_2 -= np.dot(delta_Q3,self.Loop_2_3)
+#             self.Q_iterativo_3 -= np.dot(delta_Q2,self.Loop_2_3)
             
             j_1 = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo_1,
                                                      D=self.diametros,
@@ -288,19 +287,10 @@ class Hardy_cross_numpy:
             self.h_3 = j_3 * self.comprimentos * np.sign(self.Q_iterativo_3)
             
             
-            soma_h1 = self.h_1.sum()
-            soma_h2 = self.h_2.sum()
-            soma_h3 = self.h_3.sum()
-            
-            delta_Q1 = self.vazaoCorretiva_Universal(h=self.h_1,
-                                                     Q=self.Q_iterativo_1,
-                                                     n=2)
-            delta_Q2 = self.vazaoCorretiva_Universal(h=self.h_2,
-                                                     Q=self.Q_iterativo_2,
-                                                     n=2)
-            delta_Q3 = self.vazaoCorretiva_Universal(h=self.h_3,
-                                                     Q=self.Q_iterativo_3,
-                                                     n=2)
+#             soma_h1 = self.h_1.sum()
+#             soma_h2 = self.h_2.sum()
+#             soma_h3 = self.h_3.sum()
+
         
 #         print(self.Q_iterativo_1)
 #         print(self.Q_iterativo_2)
