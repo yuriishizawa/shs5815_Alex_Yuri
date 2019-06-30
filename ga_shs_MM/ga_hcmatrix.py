@@ -57,15 +57,15 @@ class genetic_algorithm:
         '''
         Loop e analise situação
         '''
-        self.initial_pop(size_pop=100,
+        self.initial_pop(size_pop=50,
                          size_cromossomo=20,
                          minimum=0.01,
                          maximum=1)
         geracao = 0
-        while geracao < 200:
+        while geracao < 50:
             self.funcao_rede(dados_nos=dados_nos,dados_trechos=dados_trechos,dados_calibracao=dados_calibracao)
             self.selecting_mating_pool(elitismo=5,
-                                       num_filhos=100,
+                                       num_filhos=50,
                                        mutation=0.2)
             print()
             geracao += 1
@@ -73,7 +73,6 @@ class genetic_algorithm:
                 
     def selecting_mating_pool(self, elitismo, num_filhos, mutation):
         '''
-        
         Input:
         elitismo: Quantidade de filhos elitistas (0 até Número max de filhos)
         num_filhos: Número de filhos
@@ -134,9 +133,10 @@ class genetic_algorithm:
 
 class HC_numpy_matrix:
     '''
+    Módulo de Hardy-Cross para uma rede específica de 3 anéis utilizando a fórmula de perda de carga de Darcy-Weisbach.
     '''
+    
     def __init__(self, dados_trechos, dados_nos, VazaoSaida_reservatorio, rugosidade):
-        
         self.VazaoSaida_reservatorio = VazaoSaida_reservatorio
         self.Q0_modulo = np.array([1,0.307666667,0.272666667,0.359,0.086666667,0.155666667,0.211666667,0.266666667,0.307666667,0.277,0.209,0.092,0.021,0,0.083666667,0.054666667,0.181666667,0.227666667,0.258666667,0.307666667])*self.VazaoSaida_reservatorio
         
@@ -144,8 +144,10 @@ class HC_numpy_matrix:
         self.comprimentos = dados_trechos[:,0]
         
         self.cota = dados_nos[:]
-        self.Sem_Loop = np.array([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
         
+        self.rugosidade = rugosidade
+        
+        self.Sem_Loop = np.array([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
         self.Loop_123 = np.array([[0,-1,-1,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
                                  [0,1,1,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1],
                                  [0,0,0,1,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0]])
@@ -154,58 +156,85 @@ class HC_numpy_matrix:
 #         self.Loop_1_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
         self.Loop_2_3 = np.array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0])
     
-        self.rugosidade = rugosidade
+
         self.Q_r_1 = self.Q0_modulo * self.Sem_Loop
         self.Q_iterativo = self.Q0_modulo * self.Loop_123
         
     def perdaCarga_unitaria_Universal(self,Q, D,e):
-        V = abs(Q) * 4/(0.00314 * D**2)
+        '''
+        Função de Perda de carga utilizando a formulação Universal (Darcy-Weisbach)
+        
+        Input:
+        Q: Vazão (l/s)
+        D: Diâmetro (mm)
+        e: Rugosidade (mm)
+        
+        Output:
+        j: Perda de carga unitária (m/m)
+        '''
+#         V = abs(Q) * 4/(0.00314 * D**2)
+        V = abs(Q) * 4/(0.00314 * D*D)
+        
         Rey = (V * D)/(0.001)
-        f = (0.25)/(np.log10(e/(3.7*D)+5.74/(np.power(Rey,0.9))))**2   
-        return (f * V**2)/(D*0.0196)
+#         f = (0.25)/(np.log10(e/(3.7*D)+5.74/(np.power(Rey,0.9))))**2
+        a = (np.log10(e/(3.7*D)+5.74/(np.power(Rey,0.9))))
+        f = (0.25)/(a*a)
+
+#         return (f * V**2)/(D*0.0196)
+        return (f * V*V)/(D*0.0196)
     
     def vazaoCorretiva_Universal(self, h, Q, n):
+        '''
+        Função de Correção das vazões pelo método iterativo de Hardy-Cross
+        
+        Input:
+        h: Perda de Carga (m)
+        Q: Vazão (l/s)
+        n: Constante (e.g. =2 para fórmula de Darcy-Weisbach e =1.85 para Hazen-Williams)
+        
+        Output:
+        Delta_Q: delta de vazão para iteração
+        '''
         h_Q = h/Q
         h_Q[np.isnan(h_Q)] = 0
-        return -(h.sum(axis=1))/(n*h_Q.sum(axis=1))
+        return np.array([-(h.sum(axis=1))/(n*h_Q.sum(axis=1))])
     
     def simular(self):
+        '''
+        Função tem como objetivo rodar a pelo método iterativo as vazões até quando a diferença de vazão de uma iteração para outra é menor que 0.01 l/s.
+        '''
         self.j_0 = self.perdaCarga_unitaria_Universal(Q=self.Q_r_1,
                                                       D=self.diametros,
                                                       e=self.rugosidade)
         j = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo,
-                                                    D=self.diametros,
-                                                    e=self.rugosidade)
-#         print(j[0])
+                                               D=self.diametros,
+                                               e=self.rugosidade)
         self.h_0 = self.j_0 * self.comprimentos
         self.h = j * self.comprimentos * np.sign(self.Q_iterativo)
-#         print(self.h[0])
-        delta_Q = [10,10,10]
 
-        while (abs(delta_Q[0]) > 0.01) or (abs(delta_Q[1]) > 0.01) or (abs(delta_Q[2]) > 0.01):
-            
+        delta_Q = np.array([[10,10,10]])
+
+        while (abs(delta_Q[0,0]) > 0.01) or (abs(delta_Q[0,1]) > 0.01) or (abs(delta_Q[0,2]) > 0.01):
             delta_Q = self.vazaoCorretiva_Universal(h=self.h,
                                                     Q=self.Q_iterativo,
                                                     n=2)
-            # Otimizar aqui!
-            self.Q_iterativo = (self.Q_iterativo.T +delta_Q*abs(self.Loop_123.T)).T
 
-            self.Q_iterativo[0] -= delta_Q[1]*self.Loop_1_2
-            self.Q_iterativo[1] -=delta_Q[0]*self.Loop_1_2
+            self.Q_iterativo = self.Q_iterativo +delta_Q.T*abs(self.Loop_123)
             
-            self.Q_iterativo[1] -= delta_Q[2]*self.Loop_2_3
-            self.Q_iterativo[2] -= delta_Q[1]*self.Loop_2_3
+            self.Q_iterativo[0] -= delta_Q[0,1]*self.Loop_1_2
+            self.Q_iterativo[1] -= delta_Q[0,0]*self.Loop_1_2
+            
+            self.Q_iterativo[1] -= delta_Q[0,2]*self.Loop_2_3
+            self.Q_iterativo[2] -= delta_Q[0,1]*self.Loop_2_3
 
             j = self.perdaCarga_unitaria_Universal(Q=self.Q_iterativo,
                                                    D=self.diametros,
                                                    e=self.rugosidade)
             self.h = j * self.comprimentos * np.sign(self.Q_iterativo)
-#         print(self.Q_iterativo.T)
                
     def resultado_pressao(self):
         '''
-        
-            
+        Função tem como objetivo cálcular as pressões para os nós 6, 11 e 15.
         '''
         nivel_Reservatorio = 228
             
