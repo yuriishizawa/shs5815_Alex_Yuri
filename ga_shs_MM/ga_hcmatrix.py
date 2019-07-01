@@ -259,7 +259,7 @@ class HC_numpy_matrix:
         h_R1 = j_R1 * self.comprimentos[0]
         P1 = nivel_Reservatorio - h_R1
 
-        P6 = P1 - self.cota[5] - abs(self.h[1,17]) - abs(self.h[1,18]) - abs(self.h[1,19])
-        P11 = P1 - self.cota[10] - abs(self.h[0,8]) - abs(self.h[0,7]) - abs(self.h[0,6])
-        P15 = P1 - self.cota[14] - abs(self.h[0,1]) - abs(self.h[0,2]) - abs(self.h[2,3]) - abs(self.h[2,9]) - abs(self.h[2,10])
+        P6 = P1 - self.cota[5] + self.h[1,17] + self.h[1,18] + self.h[1,19]
+        P11 = P1 - self.cota[10] - self.h[0,8] - self.h[0,7] - self.h[0,6]
+        P15 = P1 - self.cota[14] + self.h[1,16] + self.h[1,17] + self.h[1,18] + self.h[1,19] + self.h[1,17] + self.h[2,13] + self.h[1,12] + self.h[1,11]
         return P6, P11, P15
