@@ -57,15 +57,15 @@ class genetic_algorithm:
         '''
         Loop e analise situação
         '''
-        self.initial_pop(size_pop=50,
+        self.initial_pop(size_pop=30,
                          size_cromossomo=20,
                          minimum=0.01,
                          maximum=1)
         geracao = 0
-        while geracao < 50:
+        while geracao < 200:
             self.funcao_rede(dados_nos=dados_nos,dados_trechos=dados_trechos,dados_calibracao=dados_calibracao)
             self.selecting_mating_pool(elitismo=5,
-                                       num_filhos=50,
+                                       num_filhos=30,
                                        mutation=0.2)
             print()
             geracao += 1
@@ -111,11 +111,23 @@ class genetic_algorithm:
         '''
         self.pais_crossover = self.sort_pop[int(len(self.sort_pop)/2):, :]       
         self.filhos_crossover = np.array([])
-        for i, crom in enumerate(self.pais_crossover):
+        
+        # Método das médias de Crossover
+#         for i, crom in enumerate(self.pais_crossover):
+#             if i == 0:
+#                 self.filhos_crossover = np.array([(self.pais_crossover[i]+self.pais_crossover[i-1])/2])
+#             else:
+#                 self.filhos_crossover = np.append(self.filhos_crossover, np.array([(self.pais_crossover[i]+self.pais_crossover[i-1])/2]), axis=0)
+        
+        # Método de troca de partes de Crossover
+        self.filhos_crossover = np.array([])
+        pointBreak = np.ceil(np.random.rand(len(self.pais_crossover),1)*self.size_cromossomo)
+        for i in range(len(self.pais_crossover)):
             if i == 0:
-                self.filhos_crossover = np.array([(self.pais_crossover[i]+self.pais_crossover[i-1])/2],dtype=np.float32)
+                self.filhos_crossover = np.array([np.append(self.pais_crossover[i,0:int(pointBreak[i])],self.pais_crossover[i-1,int(pointBreak[i]):])])
             else:
-                self.filhos_crossover = np.append(self.filhos_crossover, np.array([(self.pais_crossover[i]+self.pais_crossover[i-1])/2]), axis=0)
+                self.filhos_crossover = np.append(self.filhos_crossover, np.array([np.append(self.pais_crossover[i,0:int(pointBreak[i])],self.pais_crossover[i-1,int(pointBreak[i]):])]),axis=0)
+        
         self.funcao_mutation()
 
     def funcao_mutation(self):
@@ -215,6 +227,7 @@ class HC_numpy_matrix:
         delta_Q = np.array([[10,10,10]])
 
         while (abs(delta_Q[0,0]) > 0.01) or (abs(delta_Q[0,1]) > 0.01) or (abs(delta_Q[0,2]) > 0.01):
+#             print(delta_Q)
             delta_Q = self.vazaoCorretiva_Universal(h=self.h,
                                                     Q=self.Q_iterativo,
                                                     n=2)
@@ -232,6 +245,7 @@ class HC_numpy_matrix:
                                                    e=self.rugosidade)
             self.h = j * self.comprimentos * np.sign(self.Q_iterativo)
                
+#         print(self.Q_iterativo.T)
     def resultado_pressao(self):
         '''
         Função tem como objetivo cálcular as pressões para os nós 6, 11 e 15.
