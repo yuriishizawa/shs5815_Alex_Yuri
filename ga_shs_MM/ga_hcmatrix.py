@@ -57,12 +57,35 @@ class genetic_algorithm:
         self.filhos = np.append(self.filhos_elitistas, self.filhos_crossover,axis=0)
         
         # Criando Filhos Aleatórios
-        self.num_filhos_random = self.num_filhos-np.shape(self.filhos)[0]
-        self.filhos_random = np.random.uniform(low=self.minimum, 
-                                           high=self.maximum, 
-                                           size=(self.num_filhos_random,self.size_cromossomo))
+#         self.num_filhos_random = self.num_filhos-np.shape(self.filhos)[0]
+#         self.filhos_random = np.random.uniform(low=self.minimum, 
+#                                            high=self.maximum, 
+#                                            size=(self.num_filhos_random,self.size_cromossomo))
         
         # Criando Filhos Aleatórios e Ponderação de Anéis
+        self.num_filhos_random = self.num_filhos-np.shape(self.filhos)[0]
+        proporcao_fp_random = 0.4
+        self.num_filhos_frandom = np.floor(self.num_filhos_random*proporcao_fp_random)
+        self.num_filhos_prandom = np.ceil(self.num_filhos_random*(1-proporcao_fp_random))
+        
+        self.filhos_frandom = np.random.uniform(low=self.minimum,
+                                                high=self.maximum,
+                                                size=(int(self.num_filhos_frandom),self.size_cromossomo))
+        cromo_0Loop = np.random.uniform(low=self.minimum,
+                                             high=self.maximum,
+                                             size=(int(self.num_filhos_prandom), 1))
+        cromo_1Loop = np.random.uniform(low=self.minimum,
+                                             high=self.maximum/3,
+                                             size=(int(self.num_filhos_prandom), 8))
+        cromo_2Loop = np.random.uniform(low=self.maximum/3,
+                                             high=self.maximum*2/3,
+                                             size=(int(self.num_filhos_prandom), 7))
+        cromo_3Loop = np.random.uniform(low=self.maximum*2/3,
+                                             high=self.maximum,
+                                             size=(int(self.num_filhos_prandom), 4))
+        self.filhos_prandom = np.hstack((cromo_0Loop,cromo_3Loop,cromo_1Loop,cromo_2Loop))
+        
+        self.filhos_random = np.append(self.filhos_frandom, self.filhos_prandom,axis=0)
         
         # Filhos Elitistas, Filhos Crossovers e Filhos Aleatórios
         self.filhos = np.append(self.filhos, self.filhos_random, axis=0)
