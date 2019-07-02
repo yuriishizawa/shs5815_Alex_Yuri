@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class genetic_algorithm: 
     '''
@@ -31,46 +31,9 @@ class genetic_algorithm:
                                            high=self.maximum, 
                                            size=(self.size_pop,self.size_cromossomo))
         self.filhos = self.init_pop
-        return self.filhos
-    
-    def funcao_rede(self, dados_nos, dados_trechos, dados_calibracao):
-        '''
-        Input:
-        
-        '''
-        self.fitness = []
-        for c in self.filhos:
-#             print(c)
-            f1 = []
-#             for i,q in enumerate(dados_calibracao['Vazao(l/s)']):
-            for i,q in enumerate(dados_calibracao):
-                rede = HC_numpy_matrix(dados_nos=dados_nos,
-                                       dados_trechos=dados_trechos,
-                                       VazaoSaida_reservatorio=q[0],
-                                       rugosidade=c)
-                rede.simular()
-                f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:])))
-            self.fitness.append(sum(f1))
-        print(min(self.fitness))
+        self.fitness_min_graph = []
 
-    def jarvis(self, dados_nos, dados_trechos, dados_calibracao):
-        '''
-        Loop e analise situação
-        '''
-        self.initial_pop(size_pop=30,
-                         size_cromossomo=20,
-                         minimum=0.01,
-                         maximum=1)
-        geracao = 0
-        while geracao < 200:
-            self.funcao_rede(dados_nos=dados_nos,dados_trechos=dados_trechos,dados_calibracao=dados_calibracao)
-            self.selecting_mating_pool(elitismo=5,
-                                       num_filhos=30,
-                                       mutation=0.2)
-            print()
-            geracao += 1
-        print('Fim')
-                
+        return self.filhos
     def selecting_mating_pool(self, elitismo, num_filhos, mutation):
         '''
         Input:
@@ -98,6 +61,8 @@ class genetic_algorithm:
         self.filhos_random = np.random.uniform(low=self.minimum, 
                                            high=self.maximum, 
                                            size=(self.num_filhos_random,self.size_cromossomo))
+        
+        # Criando Filhos Aleatórios e Ponderação de Anéis
         
         # Filhos Elitistas, Filhos Crossovers e Filhos Aleatórios
         self.filhos = np.append(self.filhos, self.filhos_random, axis=0)
@@ -128,6 +93,7 @@ class genetic_algorithm:
             else:
                 self.filhos_crossover = np.append(self.filhos_crossover, np.array([np.append(self.pais_crossover[i,0:int(pointBreak[i])],self.pais_crossover[i-1,int(pointBreak[i]):])]),axis=0)
         
+        # Mutação
         self.funcao_mutation()
 
     def funcao_mutation(self):
@@ -141,6 +107,66 @@ class genetic_algorithm:
                     self.filhos_crossover[i,j] = np.random.uniform(low=self.minimum, high=self.maximum, size=1)
                 else:
                     pass
+
+    
+    def funcao_rede(self, dados_nos, dados_trechos, dados_calibracao):
+        '''
+        Input:
+        
+        '''
+        self.fitness = []
+        for c in self.filhos:
+#             print(c)
+            f1 = []
+#             for i,q in enumerate(dados_calibracao['Vazao(l/s)']):
+            for i,q in enumerate(dados_calibracao):
+                rede = HC_numpy_matrix(dados_nos=dados_nos,
+                                       dados_trechos=dados_trechos,
+                                       VazaoSaida_reservatorio=q[0],
+                                       rugosidade=c)
+                rede.simular()
+                f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:])))
+#                 print(np.array(rede.resultado_pressao()) - q[1:])
+#                 print(len(f1))
+            self.fitness.append(sum(f1))
+        print(min(self.fitness))
+        self.fitness_min_graph.append(min(self.fitness))
+
+    def jarvis(self, dados_nos, dados_trechos, dados_calibracao):
+        '''
+        Loop e analise situação
+        '''
+        self.initial_pop(size_pop=50,
+                         size_cromossomo=20,
+                         minimum=0.01,
+                         maximum=1)
+        geracao = 0
+        while geracao < 200:
+            self.funcao_rede(dados_nos=dados_nos,dados_trechos=dados_trechos,dados_calibracao=dados_calibracao)
+            self.selecting_mating_pool(elitismo=5,
+                                       num_filhos=50,
+                                       mutation=0.2)
+            print()
+            geracao += 1
+        self.evolution_graph()
+#         self.visualizacao_pressoes(dados_calibracao=dados_calibracao, dados_nos=dados_nos,dados_trechos=dados_trechos)
+        print('Fim')
+                
+    def evolution_graph(self):
+        plt.plot(range(len(self.fitness_min_graph)),self.fitness_min_graph)
+        plt.xlabel('Geração')
+        plt.ylabel('Fitness')
+        plt.show()
+        
+    def visualizacao_pressoes(self,dados_calibracao,dados_trechos,dados_nos):
+        pressoes = []
+        for i in dados_calibracao:
+            rede = HC_numpy_matrix(dados_trechos=dados_trechos,dados_nos=dados_nos,VazaoSaida_reservatorio=i[0],rugosidade=self.filhos[0])
+            rede.simular()
+#             print(rede.resultado_pressao())
+            pressoes.append(rede.resultado_pressao()-i[1:])
+        return pressoes
+    
 
 
 class HC_numpy_matrix:
@@ -259,7 +285,12 @@ class HC_numpy_matrix:
         h_R1 = j_R1 * self.comprimentos[0]
         P1 = nivel_Reservatorio - h_R1
 
+#         P6 = P1 - self.cota[5] - abs(self.h[1,17]) - abs(self.h[1,18]) - abs(self.h[1,19])
+#         P11 = P1 - self.cota[10] - abs(self.h[0,8]) - abs(self.h[0,7]) - abs(self.h[0,6])
+#         P15 = P1 - self.cota[14] - abs(self.h[0,1]) - abs(self.h[0,2]) - abs(self.h[2,3]) - abs(self.h[2,9]) - abs(self.h[2,10])
+        
         P6 = P1 - self.cota[5] + self.h[1,17] + self.h[1,18] + self.h[1,19]
         P11 = P1 - self.cota[10] - self.h[0,8] - self.h[0,7] - self.h[0,6]
-        P15 = P1 - self.cota[14] + self.h[1,16] + self.h[1,17] + self.h[1,18] + self.h[1,19] + self.h[1,17] + self.h[2,13] + self.h[1,12] + self.h[1,11]
+        P15 = P1 - self.cota[14] + self.h[1,16] + self.h[1,17] + self.h[1,18] + self.h[1,19] + self.h[2,13] + self.h[2,12] + self.h[2,11]
+
         return P6, P11, P15
