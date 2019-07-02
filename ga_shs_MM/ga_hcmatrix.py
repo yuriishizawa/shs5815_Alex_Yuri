@@ -148,7 +148,10 @@ class genetic_algorithm:
                                        VazaoSaida_reservatorio=q[0],
                                        rugosidade=c)
                 rede.simular()
-                f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:])))
+                #f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:]))) # Desvio absoluto
+                #f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:])/36)) # Desvio médio absoluto
+                f1.append(sum(np.power(np.array(rede.resultado_pressao()) - q[1:],2)/36)) #Erro quadrático médio
+                #f1.append(sum(abs(np.array(rede.resultado_pressao()) - q[1:])*100/(q[1:]*36))) # Erro médio percentual absoluto
 #                 print(np.array(rede.resultado_pressao()) - q[1:])
 #                 print(len(f1))
             self.fitness.append(sum(f1))
